@@ -1,4 +1,3 @@
-````markdown
 # Submodular Optimization Simulation
 
 Dự án này cài đặt và mô phỏng một số thuật toán cho các bài toán tối ưu dưới mô-đun trong đồ án **"Một số vấn đề tối ưu trên đồ thị và ứng dụng"**.
