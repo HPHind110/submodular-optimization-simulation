@@ -131,6 +131,3 @@ Các thuật toán được sử dụng:
 ## 6. Ghi chú
 
 Mô phỏng này tập trung vào khía cạnh toán ứng dụng và tối ưu tổ hợp. Dự án không triển khai hệ thống học máy hoặc học liên tục hoàn chỉnh.
-
-```
-```
