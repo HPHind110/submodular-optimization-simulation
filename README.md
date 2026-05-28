@@ -116,9 +116,9 @@ Các thuật toán được sử dụng:
 
 Bài toán định vị cơ sở được dùng để mô hình hóa bài toán lựa chọn tập đại diện. Hàm mục tiêu có dạng:
 
-[
+$$
 f(S)=\sum_i \max_{j\in S} w_{ij}.
-]
+$$
 
 Các thuật toán được sử dụng:
 
