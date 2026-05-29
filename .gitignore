@@ -1,5 +1,6 @@
 # Python cache
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -34,6 +35,11 @@ Thumbs.db
 
 # Generated logs
 *.log
+logs/
+tmp/
+temp/
+cache/
+data/raw/
 
 # LaTeX auxiliary files
 *.aux
@@ -55,3 +61,12 @@ Thumbs.db
 
 # Keep source LaTeX files tracked
 !*.tex
+
+# Keep reproducible processed data and report outputs tracked
+!data/processed/
+!data/processed/*.csv
+!outputs/tables/
+!outputs/tables/*.csv
+!outputs/tables/*.tex
+!outputs/figures/
+!outputs/figures/*.png

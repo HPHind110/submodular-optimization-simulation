@@ -77,3 +77,53 @@ def coverage_marginal_gain_geo(
     covered_before = covered_demand_indices(coverage_sets, selected)
     covered_after = covered_before | coverage_sets.get(x, set())
     return len(covered_after) - len(covered_before)
+
+
+def _as_demand_weights(demand_weights: FloatArray) -> FloatArray:
+    """Validate demand weights and return them as a float array."""
+
+    weights = np.asarray(demand_weights, dtype=np.float64)
+    if weights.ndim != 1:
+        raise ValueError("demand_weights must be a 1D array.")
+    if np.any(weights < 0):
+        raise ValueError("demand_weights must be non-negative.")
+    return weights
+
+
+def weighted_coverage_objective_geo(
+    coverage_sets: Mapping[int, set[int]],
+    selected: Collection[int],
+    demand_weights: FloatArray,
+) -> float:
+    """Return the total weight of demand points covered by ``selected``."""
+
+    weights = _as_demand_weights(demand_weights)
+    covered = covered_demand_indices(coverage_sets, selected)
+    if not covered:
+        return 0.0
+    max_index = max(covered)
+    if max_index >= len(weights):
+        raise IndexError("coverage_sets contains a demand index outside demand_weights.")
+    return float(np.sum(weights[list(covered)]))
+
+
+def weighted_coverage_marginal_gain_geo(
+    coverage_sets: Mapping[int, set[int]],
+    x: int,
+    selected: Collection[int],
+    demand_weights: FloatArray,
+) -> float:
+    """Return the newly covered demand weight after adding candidate ``x``."""
+
+    if x in selected:
+        return 0.0
+
+    weights = _as_demand_weights(demand_weights)
+    covered_before = covered_demand_indices(coverage_sets, selected)
+    newly_covered = coverage_sets.get(x, set()) - covered_before
+    if not newly_covered:
+        return 0.0
+    max_index = max(newly_covered)
+    if max_index >= len(weights):
+        raise IndexError("coverage_sets contains a demand index outside demand_weights.")
+    return float(np.sum(weights[list(newly_covered)]))

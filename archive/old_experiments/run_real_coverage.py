@@ -26,6 +26,8 @@ from src.geo_coverage import (  # noqa: E402
     coverage_marginal_gain_geo,
     coverage_objective_geo,
     covered_demand_indices,
+    weighted_coverage_marginal_gain_geo,
+    weighted_coverage_objective_geo,
 )
 from src.geo_metrics import (  # noqa: E402
     average_nearest_distance,
@@ -33,6 +35,7 @@ from src.geo_metrics import (  # noqa: E402
     pairwise_distance_matrix,
 )
 from src.osm_data import load_processed_points  # noqa: E402
+from src.osm_data import assign_demand_weights, is_priority_source_type  # noqa: E402
 
 
 DATA_DIR = PROJECT_ROOT / "data" / "processed"
@@ -57,6 +60,17 @@ def parse_args() -> argparse.Namespace:
         help="Coverage radius in meters.",
     )
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
+    parser.add_argument(
+        "--weighted",
+        action="store_true",
+        help="Deprecated alias for --weight-scheme priority_mild.",
+    )
+    parser.add_argument(
+        "--weight-scheme",
+        choices=["unweighted", "priority_mild", "priority_strong"],
+        default="unweighted",
+        help="Demand weighting scheme for the coverage objective.",
+    )
     return parser.parse_args()
 
 
@@ -102,18 +116,55 @@ def xy_from_table(table: pd.DataFrame) -> np.ndarray:
     return table[["x", "y"]].to_numpy(dtype=np.float64)
 
 
+def apply_weight_scheme(
+    demand_points: pd.DataFrame,
+    weight_scheme: str,
+) -> pd.DataFrame:
+    """Assign demand weights for a selected scheme."""
+
+    return assign_demand_weights(demand_points, weight_scheme)
+
+
+def priority_mask_from_demand_table(demand_points: pd.DataFrame) -> np.ndarray:
+    """Return a boolean mask for priority demand points."""
+
+    return demand_points["source_type"].map(is_priority_source_type).to_numpy(dtype=bool)
+
+
 def build_metrics_row(
     algorithm_name: str,
     result: dict[str, object],
     coverage_sets: dict[int, set[int]],
     distance_matrix: np.ndarray,
     n_demand: int,
+    demand_weights: np.ndarray,
+    priority_mask: np.ndarray,
+    weight_scheme: str,
 ) -> dict[str, float | int | str]:
     """Build one result-table row with coverage and distance metrics."""
 
     selected = set(int(index) for index in result["selected"])
+    covered = covered_demand_indices(coverage_sets, selected)
     coverage_count = coverage_objective_geo(coverage_sets, selected, n_demand)
     coverage_rate = coverage_count / n_demand if n_demand > 0 else 0.0
+    weighted_coverage_value = weighted_coverage_objective_geo(
+        coverage_sets,
+        selected,
+        demand_weights,
+    )
+    total_weight = float(np.sum(demand_weights))
+    weighted_coverage_rate = (
+        weighted_coverage_value / total_weight if total_weight > 0 else 0.0
+    )
+    priority_points_total = int(np.sum(priority_mask))
+    priority_points_covered = (
+        int(np.sum(priority_mask[list(covered)])) if covered else 0
+    )
+    priority_coverage_rate = (
+        priority_points_covered / priority_points_total
+        if priority_points_total > 0
+        else 0.0
+    )
 
     if selected:
         average_distance = average_nearest_distance(distance_matrix, selected)
@@ -124,9 +175,16 @@ def build_metrics_row(
 
     return {
         "Algorithm": algorithm_name,
+        "weight_scheme": weight_scheme,
         "objective_value": float(result["value"]),
         "coverage_count": int(coverage_count),
         "coverage_rate": float(coverage_rate),
+        "total_weight": float(total_weight),
+        "weighted_coverage_value": float(weighted_coverage_value),
+        "weighted_coverage_rate": float(weighted_coverage_rate),
+        "priority_points_total": priority_points_total,
+        "priority_points_covered": priority_points_covered,
+        "priority_coverage_rate": float(priority_coverage_rate),
         "average_nearest_distance_m": float(average_distance),
         "max_nearest_distance_m": float(max_distance),
         "eval_count": int(result["eval_count"]),
@@ -140,6 +198,8 @@ def run_algorithms(
     coverage_sets: dict[int, set[int]],
     n_demand: int,
     n_candidates: int,
+    demand_weights: np.ndarray,
+    weight_scheme: str,
 ) -> list[tuple[str, dict[str, object]]]:
     """Run coverage algorithms on the real OSM coverage instance."""
 
@@ -149,12 +209,29 @@ def run_algorithms(
         raise ValueError(f"k={k} is larger than the number of candidates ({n_candidates}).")
 
     items = list(range(n_candidates))
-    objective = lambda selected: coverage_objective_geo(coverage_sets, selected, n_demand)
-    geo_marginal_gain = lambda x, selected: coverage_marginal_gain_geo(
-        coverage_sets,
-        x,
-        selected,
-    )
+    if weight_scheme != "unweighted":
+        objective = lambda selected: weighted_coverage_objective_geo(
+            coverage_sets,
+            selected,
+            demand_weights,
+        )
+        geo_marginal_gain = lambda x, selected: weighted_coverage_marginal_gain_geo(
+            coverage_sets,
+            x,
+            selected,
+            demand_weights,
+        )
+    else:
+        objective = lambda selected: coverage_objective_geo(
+            coverage_sets,
+            selected,
+            n_demand,
+        )
+        geo_marginal_gain = lambda x, selected: coverage_marginal_gain_geo(
+            coverage_sets,
+            x,
+            selected,
+        )
     marginal_gain = lambda selected, x: geo_marginal_gain(x, selected)
 
     return [
@@ -270,8 +347,14 @@ def main() -> int:
 
     try:
         demand_points, candidate_points = load_data()
+        weight_scheme = args.weight_scheme
+        if args.weighted and weight_scheme == "unweighted":
+            weight_scheme = "priority_mild"
+        demand_points = apply_weight_scheme(demand_points, weight_scheme)
         demand_xy = xy_from_table(demand_points)
         candidate_xy = xy_from_table(candidate_points)
+        demand_weights = demand_points["weight"].to_numpy(dtype=np.float64)
+        priority_mask = priority_mask_from_demand_table(demand_points)
         distance_matrix = pairwise_distance_matrix(demand_xy, candidate_xy)
         coverage_sets = build_coverage_sets(distance_matrix, args.radius)
         algorithm_results = run_algorithms(
@@ -280,6 +363,8 @@ def main() -> int:
             coverage_sets,
             len(demand_points),
             len(candidate_points),
+            demand_weights,
+            weight_scheme,
         )
     except (FileNotFoundError, ValueError, IndexError) as exc:
         print(exc, file=sys.stderr)
@@ -292,6 +377,9 @@ def main() -> int:
             coverage_sets,
             distance_matrix,
             len(demand_points),
+            demand_weights,
+            priority_mask,
+            weight_scheme,
         )
         for algorithm_name, result in algorithm_results
     ]
@@ -307,7 +395,7 @@ def main() -> int:
         args.radius,
     )
 
-    print("Real OSM Maximum Coverage experiment")
+    print(f"Real OSM Maximum Coverage experiment ({weight_scheme})")
     print(table.to_string(index=False))
     print(f"CSV saved to: {CSV_PATH}")
     print(f"LaTeX saved to: {LATEX_PATH}")

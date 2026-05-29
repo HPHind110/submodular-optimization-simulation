@@ -1,133 +1,115 @@
-# Submodular Optimization Simulation
+# Submodular Optimization for Public Wi-Fi Coverage
 
-Dự án này cài đặt và mô phỏng một số thuật toán cho các bài toán tối ưu dưới mô-đun trong đồ án **"Một số vấn đề tối ưu trên đồ thị và ứng dụng"**.
+Du an nay mo phong bai toan phu song Wi-Fi cong cong tai khu vuc Hoan Kiem,
+Ha Noi bang du lieu OpenStreetMap. Mo hinh chinh la Maximum Coverage tren do
+thi/khong gian dia ly, voi hai tap vi tri ung vien va hai bien the objective:
 
-Trọng tâm của mô phỏng gồm:
+1. Unweighted Maximum Coverage.
+2. Weighted Maximum Coverage theo muc do uu tien cua demand points.
 
-1. Bài toán bao phủ tối đa (Maximum Coverage), dùng để mô hình hóa bài toán phủ sóng.
-2. Bài toán định vị cơ sở (Facility Location), dùng để mô hình hóa bài toán lựa chọn tập đại diện.
-3. So sánh một số biến thể của thuật toán tham lam, gồm Greedy, Lazy Greedy và Stochastic Greedy.
+Project phuc vu truc tiep cho Chuong 4 cua do an. Cac toy synthetic
+experiments va Facility Location cu da duoc chuyen vao `archive/`.
 
-## 1. Cấu trúc thư mục
+## 1. Setup
 
-```text
-submodular_simulation/
-│
-├── src/
-│   ├── algorithms.py
-│   ├── max_coverage.py
-│   ├── facility_location.py
-│   └── plotting.py
-│
-├── experiments/
-│   ├── run_max_coverage_small.py
-│   ├── run_facility_location_small.py
-│   └── run_runtime_comparison.py
-│
-├── outputs/
-│   ├── figures/
-│   └── tables/
-│
-├── SPEC.md
-├── requirements.txt
-├── README.md
-└── .gitignore
-````
+Tao va kich hoat moi truong ao:
 
-## 2. Cài đặt môi trường
-
-Tạo môi trường ảo Python:
-
-```bash
+```powershell
 python -m venv .venv
-```
-
-Kích hoạt môi trường ảo trên Windows PowerShell:
-
-```bash
 .\.venv\Scripts\Activate.ps1
 ```
 
-Cài đặt các thư viện cần thiết:
+Cai dependencies:
 
-```bash
+```powershell
 pip install -r requirements.txt
 ```
 
-Nếu chưa có file `requirements.txt`, có thể cài trực tiếp:
+## 2. Pipeline Chinh
 
-```bash
-pip install numpy pandas matplotlib scikit-learn
+Lay va xu ly du lieu OSM:
+
+```powershell
+python experiments/run_osm_data_collection.py --place "Hoan Kiem, Hanoi, Vietnam" --max-demand 1000 --max-candidates 400 --include-road-nodes --max-road-node-candidates 400 --seed 42
 ```
 
-## 3. Chạy thí nghiệm
+Chay so sanh hai tap candidate voi cac ban kinh phu song:
 
-Chạy thí nghiệm cho bài toán bao phủ tối đa:
-
-```bash
-python experiments/run_max_coverage_small.py
+```powershell
+python experiments/run_candidate_scenarios.py --radius 100
+python experiments/run_candidate_scenarios.py --radius 150
+python experiments/run_candidate_scenarios.py --radius 200
 ```
 
-Chạy thí nghiệm cho bài toán định vị cơ sở trên dữ liệu nhỏ:
+Validate candidate scenarios:
 
-```bash
-python experiments/run_facility_location_small.py
+```powershell
+python experiments/validate_candidate_scenarios.py --radii 100 150 200
 ```
 
-Chạy thí nghiệm so sánh thời gian chạy giữa Greedy, Lazy Greedy và Stochastic Greedy:
+Chay weighted coverage scenarios:
 
-```bash
-python experiments/run_runtime_comparison.py
+```powershell
+python experiments/run_weighted_coverage_scenarios.py
 ```
 
-## 4. Kết quả đầu ra
+Validate weighted coverage:
 
-Các kết quả được lưu trong thư mục `outputs/`.
+```powershell
+python experiments/validate_weighted_coverage.py
+```
 
-### Bảng kết quả
+Tao bang va hinh rut gon cho bao cao:
+
+```powershell
+python experiments/build_report_tables.py
+python experiments/build_report_figures.py
+```
+
+## 3. Outputs Chinh
+
+Du lieu da xu ly:
 
 ```text
-outputs/tables/
+data/processed/demand_points.csv
+data/processed/candidate_points.csv
+data/processed/candidate_points_bus_stop_only.csv
+data/processed/candidate_points_road_nodes.csv
 ```
 
-Thư mục này chứa các bảng kết quả ở dạng `.csv` và `.tex`.
-
-### Hình minh họa
+Bang report-level:
 
 ```text
-outputs/figures/
+outputs/tables/candidate_scenario_comparison_R100.csv
+outputs/tables/candidate_scenario_comparison_R150.csv
+outputs/tables/candidate_scenario_comparison_R200.csv
+outputs/tables/weighted_coverage_scenarios.csv
+outputs/tables/report_weighted_vs_unweighted_R150.csv
+outputs/tables/report_candidate_coverage_by_radius.csv
+outputs/tables/report_lazy_efficiency_R150.csv
 ```
 
-Thư mục này chứa các hình minh họa và biểu đồ thực nghiệm.
+Hinh report-level:
 
-## 5. Nội dung mô phỏng
+```text
+outputs/figures/candidate_scenario_coverage_R100.png
+outputs/figures/candidate_scenario_coverage_R150.png
+outputs/figures/candidate_scenario_coverage_R200.png
+outputs/figures/weighted_coverage_value_by_k.png
+outputs/figures/priority_coverage_rate_by_k.png
+outputs/figures/report_coverage_rate_by_k_all_radii.png
+outputs/figures/report_lazy_eval_reduction_R150.png
+outputs/figures/report_candidate_scenario_map_R150_k10.png
+```
 
-### Maximum Coverage
+## 4. Archive
 
-Bài toán bao phủ tối đa được dùng để mô hình hóa bài toán phủ sóng. Mục tiêu là chọn tối đa (k) tập con sao cho số phần tử được bao phủ là lớn nhất.
+Thu muc `archive/` chua cac experiment cu khong dung trong report chinh:
 
-Các thuật toán được sử dụng:
+- `archive/synthetic_experiments/`: toy Maximum Coverage, synthetic Gaussian
+  Facility Location, runtime synthetic.
+- `archive/old_experiments/`: cac script real OSM thu nghiem cu co output bi
+  ghi de hoac khong con nam trong pipeline chinh.
+- `archive/old_outputs/`: bang va hinh cu khong dung truc tiep trong Chuong 4.
 
-* Brute Force
-* Greedy
-* Random Baseline
-
-### Facility Location
-
-Bài toán định vị cơ sở được dùng để mô hình hóa bài toán lựa chọn tập đại diện. Hàm mục tiêu có dạng:
-
-$$
-f(S)=\sum_i \max_{j\in S} w_{ij}.
-$$
-
-Các thuật toán được sử dụng:
-
-* Brute Force
-* Greedy
-* Random Baseline
-* Lazy Greedy
-* Stochastic Greedy
-
-## 6. Ghi chú
-
-Mô phỏng này tập trung vào khía cạnh toán ứng dụng và tối ưu tổ hợp. Dự án không triển khai hệ thống học máy hoặc học liên tục hoàn chỉnh.
+Khong file nao bi xoa vinh vien trong buoc don repo.
