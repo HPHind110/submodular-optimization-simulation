@@ -1,0 +1,4 @@
+Algorithm,Selected,Objective Value,Ratio to Optimal,Evaluations,Runtime Seconds
+Brute Force,"{A1, A4}",6.0,1.0,10,1.790000169421546e-05
+Greedy,"{A1, A4}",6.0,1.0,10,1.5300000086426735e-05
+Random Baseline,"{A2, A4}",6.0,1.0,1000,0.002852600002370309

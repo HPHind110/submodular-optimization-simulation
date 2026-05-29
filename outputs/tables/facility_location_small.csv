@@ -1,0 +1,4 @@
+Algorithm,Selected,Objective Value,Ratio to Optimal,Evaluations,Runtime Seconds
+Brute Force,"{3, 9}",9.089966054828349,1.0,45,0.00104750000173226
+Greedy,"{3, 9}",9.089966054828349,1.0,20,0.0006900000007590279
+Random Baseline,"{3, 9}",9.089966054828349,1.0,1000,0.02022460000080173
