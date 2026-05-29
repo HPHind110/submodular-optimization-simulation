@@ -33,15 +33,24 @@ Thumbs.db
 # Local environment variables
 .env
 
-# Generated logs
+# Generated logs / temp / cache
 *.log
 logs/
 tmp/
 temp/
 cache/
+
+# Raw downloaded geospatial data can be large or unstable
 data/raw/
 
-# LaTeX auxiliary files
+# Local planning/spec/prompt files
+SPEC*.md
+PROMPT*.md
+NOTES*.md
+notes/
+local_notes/
+
+# LaTeX generated/source snippets from simulation repo
 *.aux
 *.bbl
 *.bcf
@@ -58,15 +67,14 @@ data/raw/
 *.nav
 *.snm
 *.vrb
+*.tex
 
-# Keep source LaTeX files tracked
-!*.tex
-
-# Keep reproducible processed data and report outputs tracked
+# Keep reproducible processed data and report-level outputs
 !data/processed/
 !data/processed/*.csv
+
 !outputs/tables/
 !outputs/tables/*.csv
-!outputs/tables/*.tex
+
 !outputs/figures/
 !outputs/figures/*.png
